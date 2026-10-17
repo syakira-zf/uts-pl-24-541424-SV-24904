@@ -53,10 +53,13 @@ jobs:
           QUEUE_CONNECTION: sync
         run: php artisan test
 
-  
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
       - name: Checkout repository
@@ -66,16 +69,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install and build Vue frontend
-        shell: bash
-        run: |
-          if [ -f frontend/package-lock.json ]; then
-            cd frontend
-            npm ci
-            npm run build
-          else
-            echo "Frontend belum tersedia pada branch ini."
-            echo "Build akan dijalankan setelah frontend digabungkan."
-          fi
+      - name: Install frontend dependencies
+        run: npm ci
 
+      - name: Build Vue application
+        run: npm run build
