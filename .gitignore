@@ -1,0 +1,26 @@
+# Laravel
+/backend/.env
+/backend/vendor/
+/backend/node_modules/
+/backend/.phpunit.cache/
+/backend/storage/*.key
+
+# Vue
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example
+/frontend/node_modules/
+/frontend/dist/
+
+# Root environment
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+
+# System
+.DS_Store
+Thumbs.db
