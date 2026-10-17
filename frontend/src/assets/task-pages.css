@@ -1,0 +1,258 @@
+
+.task-page {
+  min-height: 100vh;
+  padding: 48px 6%;
+  background:
+    radial-gradient(circle at 95% 0%, #fff 0%, transparent 35%),
+    #ededed;
+  color: #191919;
+  font-family: Inter, 'Segoe UI', sans-serif;
+}
+
+.task-page * {
+  box-sizing: border-box;
+}
+
+.task-container {
+  width: 100%;
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+.task-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 38px;
+  color: #777;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.task-back:hover {
+  color: #111;
+}
+
+.task-eyebrow {
+  color: #999;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.task-heading {
+  margin: 13px 0;
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 600;
+  letter-spacing: -2px;
+}
+
+.task-heading span {
+  color: #aaa;
+}
+
+.task-subtitle {
+  margin: 0 0 35px;
+  color: #888;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.task-glass-card {
+  padding: 40px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.76);
+  border: 1px solid rgba(255,255,255,.96);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  box-shadow:
+    0 20px 70px rgba(0,0,0,.055),
+    inset 0 1px 1px #fff;
+}
+
+.task-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.4px;
+  margin: 0 0 8px;
+}
+
+.task-section-description {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 28px;
+}
+
+.task-form-grid,
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 23px;
+}
+
+.task-field {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+}
+
+.task-field.full {
+  grid-column: 1 / -1;
+}
+
+.task-field label,
+.task-detail-label {
+  font-size: 10px;
+  letter-spacing: 1.1px;
+  font-weight: 700;
+  color: #4b4b4b;
+}
+
+.task-field input,
+.task-field select,
+.task-field textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 15px;
+  border: 1px solid #ddd;
+  border-radius: 11px;
+  background: rgba(255,255,255,.87);
+  color: #222;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  transition: .2s ease;
+}
+
+.task-field textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+
+.task-field input:focus,
+.task-field select:focus,
+.task-field textarea:focus {
+  border-color: #777;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.05);
+}
+
+.task-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 35px;
+  padding-top: 25px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.task-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 47px;
+  padding: 12px 24px;
+  border-radius: 11px;
+  font: 600 12px Inter, 'Segoe UI', sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.task-btn-primary {
+  background: #191919;
+  border: 1px solid #191919;
+  color: #fff;
+}
+
+.task-btn-primary:hover {
+  background: #383838;
+  transform: translateY(-1px);
+}
+
+.task-btn-secondary {
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.task-btn-secondary:hover {
+  background: #eee;
+}
+
+.task-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.task-error {
+  background: #fff1f1;
+  border: 1px solid #f2d2d2;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 20px 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #9b3434;
+}
+
+.task-detail-item {
+  padding: 15px 0;
+  border-bottom: 1px solid #ededed;
+}
+
+.task-detail-value {
+  margin-top: 11px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.task-detail-value.description {
+  white-space: pre-wrap;
+}
+
+.task-pill {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 30px;
+  background: #ededed;
+  color: #333;
+  font-size: 12px;
+}
+
+.task-pill.dark {
+  background: #202020;
+  color: #fff;
+}
+
+@media (max-width: 650px) {
+  .task-page {
+    padding: 30px 18px;
+  }
+
+  .task-glass-card {
+    padding: 24px;
+  }
+
+  .task-form-grid,
+  .task-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-field.full {
+    grid-column: auto;
+  }
+
+  .task-actions {
+    flex-direction: column;
+  }
+
+  .task-btn {
+    width: 100%;
+  }
+}
