@@ -31,7 +31,7 @@ services:
       retries: 15
       start_period: 30s
 
-  # BACKEND LARAVEL
+  # BACKEND LARAVEL + FRANKENPHP
   backend:
     build:
       context: ./backend
@@ -64,7 +64,7 @@ services:
     command:
       - sh
       - -c
-      - php artisan migrate --force && exec apache2-foreground
+      - php artisan migrate --force && exec frankenphp run --config /etc/caddy/Caddyfile
 
     networks:
       - syakiratask-network
