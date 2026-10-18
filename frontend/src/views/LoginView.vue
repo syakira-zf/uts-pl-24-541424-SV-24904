@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import api from '@/services/api'
 
 const router = useRouter()
-
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -13,27 +12,54 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 async function handleLogin() {
-  errorMessage.value = ''
+  if (loading.value) return
   loading.value = true
+  errorMessage.value = ''
+
+  // Jangan mewarisi token palsu dari respons yang sebelumnya tidak valid.
+  localStorage.removeItem('syakiratask_token')
+  localStorage.removeItem('syakiratask_user')
 
   try {
     const response = await api.post('/login', {
-      email: email.value,
+      email: email.value.trim(),
       password: password.value,
     })
 
-    localStorage.setItem('syakiratask_token', response.data.token)
-    localStorage.setItem('syakiratask_user', JSON.stringify(response.data.user))
+    const payload = response.data
+    const token = payload?.token
+    const user = payload?.user
 
-    router.push('/dashboard')
+    if (
+      typeof token !== 'string' ||
+      !token.trim() ||
+      token === 'undefined' ||
+      !user ||
+      typeof user !== 'object' ||
+      Array.isArray(user)
+    ) {
+      errorMessage.value =
+        'Login belum berhasil: API tidak mengirim token dan data pengguna yang valid.'
+      console.error('Format respons login tidak valid (tanpa membocorkan token).', {
+        status: response.status,
+        keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+      })
+      return
+    }
+
+    localStorage.setItem('syakiratask_token', token)
+    localStorage.setItem('syakiratask_user', JSON.stringify(user))
+    await router.replace('/dashboard')
   } catch (error) {
-    if (error.response?.status === 401) {
-      errorMessage.value = 'Email atau password tidak sesuai.'
-    } else if (error.response?.status === 422) {
+    const status = error.response?.status
+    if (status === 401) {
+      errorMessage.value = 'Email atau password tidak sesuai atau sesi tidak sah.'
+    } else if (status === 422) {
       errorMessage.value = 'Periksa kembali email dan password.'
     } else {
-      errorMessage.value = 'Tidak dapat terhubung ke server. Coba lagi.'
+      errorMessage.value = 'Login gagal. Periksa koneksi dan respons API Laravel.'
     }
+    console.error('Login gagal:', status || error.message)
   } finally {
     loading.value = false
   }
