@@ -9,41 +9,60 @@ const tasks = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
 
-const user = ref(
-  JSON.parse(localStorage.getItem('syakiratask_user') || 'null'),
-)
+function getStoredUser() {
+  const raw = localStorage.getItem('syakiratask_user')
+  if (!raw || raw === 'undefined' || raw === 'null') return null
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
+  } catch {
+    localStorage.removeItem('syakiratask_user')
+    return null
+  }
+}
 
-const totalTasks = computed(() => tasks.value.length)
-const completedTasks = computed(
-  () => tasks.value.filter((task) => task.status === 'completed').length,
-)
-const pendingTasks = computed(
-  () => tasks.value.filter((task) => task.status === 'pending').length,
-)
-const inProgressTasks = computed(
-  () => tasks.value.filter((task) => task.status === 'in_progress').length,
-)
-
-const upcomingTasks = computed(() =>
-  [...tasks.value]
-    .filter((task) => task.status !== 'completed')
-    .filter((task) => task.activity_date >= new Date().toLocaleDateString('en-CA'))
-    .sort((a, b) => a.activity_date.localeCompare(b.activity_date))
-    .slice(0, 5),
-)
+const user = ref(getStoredUser())
+const safeTasks = computed(() => Array.isArray(tasks.value) ? tasks.value : [])
+const totalTasks = computed(() => safeTasks.value.length)
+const completedTasks = computed(() => safeTasks.value.filter(t => t?.status === 'completed').length)
+const pendingTasks = computed(() => safeTasks.value.filter(t => t?.status === 'pending').length)
+const inProgressTasks = computed(() => safeTasks.value.filter(t => t?.status === 'in_progress').length)
+const upcomingTasks = computed(() => [...safeTasks.value]
+  .filter(t => t && t.status !== 'completed' && t.activity_date)
+  .filter(t => String(t.activity_date).slice(0, 10) >= new Date().toLocaleDateString('en-CA'))
+  .sort((a, b) => String(a.activity_date).localeCompare(String(b.activity_date)))
+  .slice(0, 5))
 
 async function loadTasks() {
   loading.value = true
   errorMessage.value = ''
-
   try {
     const response = await api.get('/tasks')
-    tasks.value = response.data.data
-  } catch (error) {
-    errorMessage.value = 'Gagal mengambil data tugas dari server.'
-    if (error.response?.status === 401) {
-      router.push('/login')
+    const payload = response.data
+    const list = Array.isArray(payload) ? payload : payload?.data
+    if (!Array.isArray(list)) {
+      tasks.value = []
+      errorMessage.value = payload?.message === 'Unauthenticated.'
+        ? 'Sesi tidak sah. Silakan login ulang setelah API Laravel diperbaiki.'
+        : 'Format data tugas dari API tidak sesuai.'
+      if (payload?.message === 'Unauthenticated.') {
+        localStorage.removeItem('syakiratask_token')
+        localStorage.removeItem('syakiratask_user')
+      }
+      console.error('Format respons tasks tidak sesuai.', { status: response.status, keys: Object.keys(payload || {}) })
+      return
     }
+    tasks.value = list
+  } catch (error) {
+    tasks.value = []
+    if (error.response?.status === 401) {
+      localStorage.removeItem('syakiratask_token')
+      localStorage.removeItem('syakiratask_user')
+      await router.replace('/login')
+      return
+    }
+    errorMessage.value = 'Gagal mengambil data tugas dari server.'
+    console.error('Gagal memuat tugas:', error.response?.status || error.message)
   } finally {
     loading.value = false
   }
@@ -53,20 +72,19 @@ async function logout() {
   try {
     await api.post('/logout')
   } catch (error) {
-    console.error('Logout error:', error)
+    console.warn('Logout API gagal:', error.response?.status || error.message)
   } finally {
     localStorage.removeItem('syakiratask_token')
     localStorage.removeItem('syakiratask_user')
-    router.push('/login')
+    await router.replace('/login')
   }
 }
 
 function formatDate(date) {
   if (!date) return '-'
-  return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  const dateValue = new Date(`${String(date).slice(0, 10)}T00:00:00`)
+  return Number.isNaN(dateValue.getTime()) ? '-' : dateValue.toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'short', year: 'numeric',
   })
 }
 
