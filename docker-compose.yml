@@ -39,6 +39,22 @@ services:
 
     restart: unless-stopped
 
+    
+    
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          php -r '$$r=@file_get_contents("http://127.0.0.1/api/health");
+          $$d=json_decode($$r ?: "", true);
+          exit(is_array($$d) && ($$d["status"] ?? "") === "healthy" ? 0 : 1);'
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+
+
     environment:
       APP_NAME: SyakiraTask
       APP_ENV: local
@@ -56,6 +72,15 @@ services:
       SESSION_DRIVER: database
       CACHE_STORE: database
       QUEUE_CONNECTION: sync
+
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: info
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
     depends_on:
       db:
@@ -88,11 +113,9 @@ services:
     networks:
       - syakiratask-network
 
-
 # NAMED VOLUME UNTUK PERSISTENSI MYSQL
 volumes:
   mysql_data:
-
 
 # JARINGAN INTERNAL DOCKER COMPOSE
 networks:

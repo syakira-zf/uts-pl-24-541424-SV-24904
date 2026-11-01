@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -33,21 +34,50 @@ class TaskController extends Controller
         );
 
         if ($validator->fails()) {
+            // LOG 1: Validasi gagal
+            Log::warning('TASK_VALIDATION_FAILED', [
+                'action' => 'create',
+                'user_id' => $request->user()->id,
+                'invalid_fields' => array_keys($validator->errors()->toArray()),
+            ]);
+
             return response()->json([
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors(),
             ], 422);
         }
 
-        $task = Task::create([
-            ...$validator->validated(),
-            'user_id' => $request->user()->id,
-        ]);
+        try {
+            $task = Task::create([
+                ...$validator->validated(),
+                'user_id' => $request->user()->id,
+            ]);
 
-        return response()->json([
-            'message' => 'Tugas berhasil ditambahkan',
-            'data' => $task,
-        ], 201);
+            // LOG 2: Data berhasil disimpan
+            Log::info('TASK_CREATED', [
+                'action' => 'create',
+                'user_id' => $request->user()->id,
+                'task_id' => $task->id,
+                'result' => 'success',
+            ]);
+
+            return response()->json([
+                'message' => 'Tugas berhasil ditambahkan',
+                'data' => $task,
+            ], 201);
+        } catch (\Throwable $e) {
+            // LOG 3: Kesalahan penyimpanan/server
+            Log::error('TASK_CREATE_FAILED', [
+                'action' => 'create',
+                'user_id' => $request->user()->id,
+                'error_type' => get_class($e),
+                'result' => 'failed',
+            ]);
+
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat menyimpan tugas.',
+            ], 500);
+        }
     }
 
     // GET /api/tasks/{task}
@@ -72,6 +102,13 @@ class TaskController extends Controller
         );
 
         if ($validator->fails()) {
+            Log::warning('TASK_VALIDATION_FAILED', [
+                'action' => 'update',
+                'user_id' => $request->user()->id,
+                'task_id' => $item->id,
+                'invalid_fields' => array_keys($validator->errors()->toArray()),
+            ]);
+
             return response()->json([
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors(),
@@ -79,6 +116,13 @@ class TaskController extends Controller
         }
 
         $item->update($validator->validated());
+
+        Log::info('TASK_UPDATED', [
+            'action' => 'update',
+            'user_id' => $request->user()->id,
+            'task_id' => $item->id,
+            'result' => 'success',
+        ]);
 
         return response()->json([
             'message' => 'Tugas berhasil diperbarui',
@@ -90,8 +134,16 @@ class TaskController extends Controller
     public function destroy(Request $request, string $task): JsonResponse
     {
         $item = $this->findOwnedTask($request, $task);
+        $taskId = $item->id;
 
         $item->delete();
+
+        Log::info('TASK_DELETED', [
+            'action' => 'delete',
+            'user_id' => $request->user()->id,
+            'task_id' => $taskId,
+            'result' => 'success',
+        ]);
 
         return response()->json([
             'message' => 'Tugas berhasil dihapus',
