@@ -8,14 +8,16 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TaskController;
 
 // ==========================================
-// 1. LOGIN (TANPA TOKEN)
+// 1. LOGIN TANPA TOKEN
 // ==========================================
 
-Route::post('/login', [AuthController::class, 'login']);
-
+Route::post('/login', [
+    AuthController::class,
+    'login'
+]);
 
 // ==========================================
-// 3. HEALTH CHECK DATABASE DAN CACHE
+// 2. HEALTH CHECK DATABASE DAN CACHE
 // ==========================================
 
 Route::get('/health', function () {
@@ -25,13 +27,16 @@ Route::get('/health', function () {
         'cache' => 'down',
     ];
 
-    // Periksa koneksi MySQL dengan timeout singkat
+    // Pemeriksaan koneksi database MySQL
     try {
 
         $pdo = new \PDO(
-            'mysql:host=' . config('database.connections.mysql.host') .
-            ';port=' . config('database.connections.mysql.port') .
-            ';dbname=' . config('database.connections.mysql.database') .
+            'mysql:host=' .
+                config('database.connections.mysql.host') .
+            ';port=' .
+                config('database.connections.mysql.port') .
+            ';dbname=' .
+                config('database.connections.mysql.database') .
             ';connect_timeout=2',
             config('database.connections.mysql.username'),
             config('database.connections.mysql.password'),
@@ -47,14 +52,19 @@ Route::get('/health', function () {
 
     } catch (\Throwable $e) {
 
+        // LOG ERROR: Koneksi database gagal
         Log::error('HEALTH_DATABASE_FAILED', [
+            'actor' => 'system_healthcheck',
+            'action' => 'check_database_connection',
+            'reason' => 'database_connection_failed',
             'error_type' => get_class($e),
-            'message' => $e->getMessage(),
+            'error_code' => (string) $e->getCode(),
+            'result' => 'failed',
         ]);
 
     }
 
-    // Periksa cache Laravel
+    // Pemeriksaan cache Laravel
     try {
 
         $key = 'syakiratask_health_check';
@@ -63,6 +73,14 @@ Route::get('/health', function () {
 
         if (Cache::get($key) === 'healthy') {
             $checks['cache'] = 'up';
+        } else {
+
+            Log::error('HEALTH_CACHE_FAILED', [
+                'actor' => 'system_healthcheck',
+                'action' => 'check_cache',
+                'reason' => 'cache_value_mismatch',
+                'result' => 'failed',
+            ]);
         }
 
         Cache::forget($key);
@@ -70,13 +88,17 @@ Route::get('/health', function () {
     } catch (\Throwable $e) {
 
         Log::error('HEALTH_CACHE_FAILED', [
+            'actor' => 'system_healthcheck',
+            'action' => 'check_cache',
+            'reason' => 'cache_operation_failed',
             'error_type' => get_class($e),
-            'message' => $e->getMessage(),
+            'error_code' => (string) $e->getCode(),
+            'result' => 'failed',
         ]);
 
     }
 
-    // Tentukan status keseluruhan
+    // Status kesehatan keseluruhan
     $healthy =
         $checks['database'] === 'up' &&
         $checks['cache'] === 'up';
@@ -88,22 +110,27 @@ Route::get('/health', function () {
 
 });
 
-
 // ==========================================
-// 4. ROUTE DENGAN AUTENTIKASI SANCTUM
+// 3. ROUTE DENGAN TOKEN SANCTUM
 // ==========================================
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Data pengguna yang sedang login
     Route::get('/user', function (Request $request) {
-        return response()->json($request->user());
+
+        return response()->json(
+            $request->user()
+        );
     });
 
-    // Logout
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [
+        AuthController::class,
+        'logout'
+    ]);
 
-    // CRUD Tasks
-    Route::apiResource('tasks', TaskController::class);
+    Route::apiResource(
+        'tasks',
+        TaskController::class
+    );
 
 });
