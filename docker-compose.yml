@@ -73,7 +73,7 @@ services:
       CACHE_STORE: database
       QUEUE_CONNECTION: sync
 
-      LOG_CHANNEL: stderr
+      LOG_CHANNEL: stdout
       LOG_LEVEL: info
 
     logging:
