@@ -33,12 +33,17 @@ class TaskController extends Controller
             $this->rules()
         );
 
+        // LOG WARNING: Validasi gagal
         if ($validator->fails()) {
-            // LOG 1: Validasi gagal
+
             Log::warning('TASK_VALIDATION_FAILED', [
-                'action' => 'create',
-                'user_id' => $request->user()->id,
-                'invalid_fields' => array_keys($validator->errors()->toArray()),
+                'actor' => 'authenticated_user',
+                'action' => 'create_task',
+                'reason' => 'validation_failed',
+                'invalid_fields' => array_keys(
+                    $validator->errors()->toArray()
+                ),
+                'result' => 'rejected',
             ]);
 
             return response()->json([
@@ -48,16 +53,17 @@ class TaskController extends Controller
         }
 
         try {
+
             $task = Task::create([
                 ...$validator->validated(),
                 'user_id' => $request->user()->id,
             ]);
 
-            // LOG 2: Data berhasil disimpan
+            // LOG INFO: Tugas berhasil disimpan
             Log::info('TASK_CREATED', [
-                'action' => 'create',
-                'user_id' => $request->user()->id,
-                'task_id' => $task->id,
+                'actor' => 'authenticated_user',
+                'action' => 'create_task',
+                'reason' => 'validation_passed',
                 'result' => 'success',
             ]);
 
@@ -65,12 +71,16 @@ class TaskController extends Controller
                 'message' => 'Tugas berhasil ditambahkan',
                 'data' => $task,
             ], 201);
+
         } catch (\Throwable $e) {
-            // LOG 3: Kesalahan penyimpanan/server
+
+            // LOG ERROR: Gagal menyimpan tugas
             Log::error('TASK_CREATE_FAILED', [
-                'action' => 'create',
-                'user_id' => $request->user()->id,
+                'actor' => 'authenticated_user',
+                'action' => 'create_task',
+                'reason' => 'task_storage_failed',
                 'error_type' => get_class($e),
+                'error_code' => (string) $e->getCode(),
                 'result' => 'failed',
             ]);
 
@@ -81,8 +91,11 @@ class TaskController extends Controller
     }
 
     // GET /api/tasks/{task}
-    public function show(Request $request, string $task): JsonResponse
-    {
+    public function show(
+        Request $request,
+        string $task
+    ): JsonResponse {
+
         $item = $this->findOwnedTask($request, $task);
 
         return response()->json([
@@ -92,8 +105,11 @@ class TaskController extends Controller
     }
 
     // PUT /api/tasks/{task}
-    public function update(Request $request, string $task): JsonResponse
-    {
+    public function update(
+        Request $request,
+        string $task
+    ): JsonResponse {
+
         $item = $this->findOwnedTask($request, $task);
 
         $validator = Validator::make(
@@ -102,11 +118,15 @@ class TaskController extends Controller
         );
 
         if ($validator->fails()) {
+
             Log::warning('TASK_VALIDATION_FAILED', [
-                'action' => 'update',
-                'user_id' => $request->user()->id,
-                'task_id' => $item->id,
-                'invalid_fields' => array_keys($validator->errors()->toArray()),
+                'actor' => 'authenticated_user',
+                'action' => 'update_task',
+                'reason' => 'validation_failed',
+                'invalid_fields' => array_keys(
+                    $validator->errors()->toArray()
+                ),
+                'result' => 'rejected',
             ]);
 
             return response()->json([
@@ -118,9 +138,9 @@ class TaskController extends Controller
         $item->update($validator->validated());
 
         Log::info('TASK_UPDATED', [
-            'action' => 'update',
-            'user_id' => $request->user()->id,
-            'task_id' => $item->id,
+            'actor' => 'authenticated_user',
+            'action' => 'update_task',
+            'reason' => 'validation_passed',
             'result' => 'success',
         ]);
 
@@ -131,17 +151,19 @@ class TaskController extends Controller
     }
 
     // DELETE /api/tasks/{task}
-    public function destroy(Request $request, string $task): JsonResponse
-    {
+    public function destroy(
+        Request $request,
+        string $task
+    ): JsonResponse {
+
         $item = $this->findOwnedTask($request, $task);
-        $taskId = $item->id;
 
         $item->delete();
 
         Log::info('TASK_DELETED', [
-            'action' => 'delete',
-            'user_id' => $request->user()->id,
-            'task_id' => $taskId,
+            'actor' => 'authenticated_user',
+            'action' => 'delete_task',
+            'reason' => 'delete_completed',
             'result' => 'success',
         ]);
 
@@ -150,32 +172,78 @@ class TaskController extends Controller
         ], 200);
     }
 
-    private function findOwnedTask(Request $request, string $id): Task
-    {
-        return Task::where('user_id', $request->user()->id)
-            ->findOrFail($id);
+    private function findOwnedTask(
+        Request $request,
+        string $id
+    ): Task {
+
+        return Task::where(
+            'user_id',
+            $request->user()->id
+        )->findOrFail($id);
     }
 
     private function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'description' => [
+                'nullable',
+                'string',
+            ],
+
             'type' => [
                 'required',
-                Rule::in(['task', 'meeting', 'event', 'study', 'personal']),
+                Rule::in([
+                    'task',
+                    'meeting',
+                    'event',
+                    'study',
+                    'personal',
+                ]),
             ],
-            'activity_date' => ['required', 'date'],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i'],
-            'deadline' => ['nullable', 'date'],
+
+            'activity_date' => [
+                'required',
+                'date',
+            ],
+
+            'start_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+
+            'end_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+
+            'deadline' => [
+                'nullable',
+                'date',
+            ],
+
             'priority' => [
                 'required',
-                Rule::in(['low', 'medium', 'high']),
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                ]),
             ],
+
             'status' => [
                 'required',
-                Rule::in(['pending', 'in_progress', 'completed']),
+                Rule::in([
+                    'pending',
+                    'in_progress',
+                    'completed',
+                ]),
             ],
         ];
     }
