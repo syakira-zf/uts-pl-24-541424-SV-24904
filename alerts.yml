@@ -1,0 +1,13 @@
+groups:
+  - name: syakiratask-alerts
+    rules:
+      - alert: SyakiraTaskBackendDown
+        expr: up{job="aplikasi"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          application: syakiratask
+        annotations:
+          summary: "Backend SyakiraTask tidak dapat diakses"
+          description: "Prometheus gagal mengambil metrik dari backend SyakiraTask selama 1 menit."
+          action: "Periksa status backend dengan docker compose ps, lalu cek log menggunakan docker compose logs backend."

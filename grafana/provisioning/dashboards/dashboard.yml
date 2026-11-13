@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: SyakiraTask Monitoring
+    orgId: 1
+    folder: SyakiraTask
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

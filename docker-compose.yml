@@ -5,19 +5,15 @@ services:
   db:
     image: mysql:8.4
     restart: unless-stopped
-
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-
     volumes:
       - mysql_data:/var/lib/mysql
-
     networks:
       - syakiratask-network
-
     healthcheck:
       test:
         - CMD-SHELL
@@ -36,11 +32,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-
     restart: unless-stopped
-
-    
-    
     healthcheck:
       test:
         - CMD-SHELL
@@ -52,9 +44,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-
-
-
     environment:
       APP_NAME: SyakiraTask
       APP_ENV: local
@@ -75,22 +64,18 @@ services:
 
       LOG_CHANNEL: stdout
       LOG_LEVEL: info
-
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-
     depends_on:
       db:
         condition: service_healthy
-
     command:
       - sh
       - -c
       - php artisan migrate --force && exec frankenphp run --config /etc/caddy/Caddyfile
-
     networks:
       - syakiratask-network
 
@@ -101,21 +86,76 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: /api
-
     restart: unless-stopped
-
     ports:
       - "8080:80"
-
     depends_on:
       - backend
+    networks:
+      - syakiratask-network
+
+  # PROMETHEUS - PENGUMPUL METRIK
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prom_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    networks:
+      - syakiratask-network
+
+  # GRAFANA - VISUALISASI DASHBOARD
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:?Isi GRAFANA_PASS di file .env}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - syakiratask-network
+  
+  # CADVISOR - MONITORING CPU DAN MEMORI CONTAINER
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    restart: unless-stopped
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
 
     networks:
       - syakiratask-network
 
-# NAMED VOLUME UNTUK PERSISTENSI MYSQL
+
+  # NODE EXPORTER - MONITORING SERVER
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    restart: unless-stopped
+    networks:
+      - syakiratask-network
+
+# NAMED VOLUME UNTUK PERSISTENSI DATA
 volumes:
   mysql_data:
+  prom_data:
+  grafana_data:
 
 # JARINGAN INTERNAL DOCKER COMPOSE
 networks:

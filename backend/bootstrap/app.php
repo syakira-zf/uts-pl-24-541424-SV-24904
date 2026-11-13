@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CatatMetrik;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,7 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Middleware bawaan Laravel.
+
+        // Tambahkan pencatatan metrik ke seluruh route API.
+        $middleware->api(append: [
+            CatatMetrik::class,
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
 
@@ -25,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         );
 
-        // Permintaan API tanpa token harus menghasilkan HTTP 401.
+        // Permintaan API tanpa token menghasilkan HTTP 401.
         $exceptions->render(
             function (AuthenticationException $e, Request $request) {
                 if ($request->is('api/*')) {
